@@ -1,1 +1,15 @@
-# reviewdog-action-flake8
+# reviewdog/action-flake8
+
+🐶 Run flake8 with reviewdog on pull requests to improve code review experience.
+
+Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/reviewdog/action-flake8](https://github.com/reviewdog/action-flake8).
+
+## Versions
+
+| Version | Tag | Upstream commit |
+|---------|-----|-----------------|
+| v3.13.0 | [`v3.13.0`](https://github.com/chainguard-actions/reviewdog-action-flake8/tree/v3.13.0) | [`bb6388d`](https://github.com/reviewdog/action-flake8/commit/bb6388da0678ddbc475d74e6c2b871009baaf353) |
+
+## Privacy
+
+This Action contacts Chainguard's licensing server to verify authorization. Connection metadata (IP address, GitHub repository identifier, timestamp, and any metadata encoded in the auth token) is transmitted to Chainguard, Inc. even if authorization is denied in accordance with our [Privacy Notice](https://www.chainguard.dev/legal/privacy-notice)
