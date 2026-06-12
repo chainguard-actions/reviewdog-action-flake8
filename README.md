@@ -9,6 +9,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
 | v3.13.0 | [`v3.13.0`](https://github.com/chainguard-actions/reviewdog-action-flake8/tree/v3.13.0) | [`bb6388d`](https://github.com/reviewdog/action-flake8/commit/bb6388da0678ddbc475d74e6c2b871009baaf353) |
+| v3.15.0 | [`v3.15.0`](https://github.com/chainguard-actions/reviewdog-action-flake8/tree/v3.15.0) | [`1371ffd`](https://github.com/reviewdog/action-flake8/commit/1371ffd2484f5b5e77ddec9089a6741cf3433ca5) |
 
 ## Privacy
 
