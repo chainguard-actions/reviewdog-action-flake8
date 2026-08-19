@@ -1,0 +1,28 @@
+name: Test fail_level none - errors found but no failure
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create Python file with flake8 issues
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/test_errors"
+          cat > "$GITHUB_WORKSPACE/test_errors/bad.py" << 'EOF'
+          import os
+          import sys
+          x=1
+          EOF
+      - id: action
+        uses: .
+        with:
+          github_token: "dummy-token"
+          workdir: "test_errors"
+          reporter: "local"
+          fail_level: "none"
+          filter_mode: "nofilter"
+      - name: Assert action succeeded despite flake8 errors (fail_level=none)
+        run: |
+          echo "Action completed with exit code 0 despite flake8 errors because fail_level=none"
+          echo "PASS"

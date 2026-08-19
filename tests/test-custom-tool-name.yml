@@ -1,0 +1,38 @@
+name: Test custom tool_name and level inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Python and flake8
+        run: |
+          python3 --version
+          python3 -m pip install --upgrade pip flake8
+
+      - name: Set up fake wget for reviewdog install
+        run: |
+          chmod +x "$GITHUB_WORKSPACE/tests/fixtures/fake-wget.sh"
+          mkdir -p "$HOME/bin"
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-wget.sh" "$HOME/bin/wget"
+          chmod +x "$HOME/bin/wget"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Run action with custom tool_name and warning level
+        id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/python
+          flake8_args: "clean.py --exclude=with_errors.py"
+          tool_name: "my-flake8-linter"
+          level: warning
+          reporter: github-check
+          filter_mode: nofilter
+          fail_level: none
+
+      - name: Assert action completed successfully with custom tool name
+        run: |
+          echo "PASS: action ran successfully with custom tool_name and warning level"

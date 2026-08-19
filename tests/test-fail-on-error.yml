@@ -1,0 +1,32 @@
+name: Test fail_level error - action fails when errors found
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create Python file with flake8 errors
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/test_fail"
+          printf 'import os\nimport sys\nx=1\n' > "$GITHUB_WORKSPACE/test_fail/bad.py"
+      - id: action
+        uses: .
+        with:
+          github_token: "dummy-token"
+          workdir: "test_fail"
+          reporter: "local"
+          fail_level: "error"
+          filter_mode: "nofilter"
+          level: "error"
+        continue-on-error: true
+      - name: Assert action failed due to flake8 errors with fail_level=error
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail when fail_level=error and errors exist, got outcome=$OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly failed when flake8 found errors with fail_level=error"

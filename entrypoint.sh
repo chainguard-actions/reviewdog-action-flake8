@@ -10,12 +10,10 @@ export REVIEWDOG_GITHUB_API_TOKEN="${INPUT_GITHUB_TOKEN}"
 export REVIEWDOG_VERSION=v0.20.2
 
 echo "[action-flake8] Installing reviewdog..."
-# Download the install script to a temp file first, then execute it
-# (avoids piping from the internet directly to sh)
-_install_script="$(mktemp)"
-wget -O "${_install_script}" -q https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh
-sh "${_install_script}" -b /tmp "${REVIEWDOG_VERSION}"
-rm -f "${_install_script}"
+INSTALL_SCRIPT="$(mktemp)"
+wget -O "${INSTALL_SCRIPT}" -q https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh
+sh "${INSTALL_SCRIPT}" -b /tmp "${REVIEWDOG_VERSION}"
+rm -f "${INSTALL_SCRIPT}"
 
 if [[ "$(which flake8)" == "" ]]; then
   echo "[action-flake8] Installing flake8 package..."
@@ -26,14 +24,9 @@ flake8 --version
 
 echo "[action-flake8] Checking python code with the flake8 linter and reviewdog..."
 exit_val="0"
-
-# Split user-supplied flag strings into arrays to prevent shell metacharacter injection.
-# Using read -ra ensures each whitespace-delimited token becomes a separate array element
-# and no shell metacharacters (;, |, &, $(...), etc.) are interpreted.
-read -ra flake8_args_array    <<< "${INPUT_FLAKE8_ARGS}"
-read -ra reviewdog_flags_array <<< "${INPUT_REVIEWDOG_FLAGS}"
-
-flake8 . "${flake8_args_array[@]+"${flake8_args_array[@]}"}" 2>&1 |
+read -ra flake8_args <<< "${INPUT_FLAKE8_ARGS}"
+read -ra reviewdog_flags <<< "${INPUT_REVIEWDOG_FLAGS}"
+flake8 . "${flake8_args[@]}" 2>&1 | # Removes ansi codes see https://github.com/reviewdog/errorformat/issues/51
   /tmp/reviewdog -f="${INPUT_ERROR_FORMAT}" \
     -name="${INPUT_TOOL_NAME}" \
     -reporter="${INPUT_REPORTER}" \
@@ -41,7 +34,7 @@ flake8 . "${flake8_args_array[@]+"${flake8_args_array[@]}"}" 2>&1 |
     -fail-level="${INPUT_FAIL_LEVEL}" \
     -fail-on-error="${INPUT_FAIL_ON_ERROR}" \
     -level="${INPUT_LEVEL}" \
-    "${reviewdog_flags_array[@]+"${reviewdog_flags_array[@]}"}" || exit_val="$?"
+    "${reviewdog_flags[@]}" || exit_val="$?"
 
 echo "[action-flake8] Clean up reviewdog..."
 rm /tmp/reviewdog

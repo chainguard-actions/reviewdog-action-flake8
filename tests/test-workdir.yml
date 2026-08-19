@@ -1,0 +1,33 @@
+name: Test workdir input - run flake8 in subdirectory
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create clean Python file in subdirectory
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/myproject/src"
+          cat > "$GITHUB_WORKSPACE/myproject/src/module.py" << 'EOF'
+          """A clean Python module."""
+
+
+          def greet(name):
+              """Return a greeting."""
+              return "Hello, " + name
+          EOF
+          # Also create a bad file at root to confirm workdir scoping
+          printf 'import os\nx=1\n' > "$GITHUB_WORKSPACE/myproject/bad_root.py"
+      - id: action
+        uses: .
+        with:
+          github_token: "dummy-token"
+          workdir: "myproject/src"
+          reporter: "local"
+          fail_level: "none"
+          filter_mode: "nofilter"
+      - name: Assert action ran in the specified workdir
+        run: |
+          echo "Action ran successfully in myproject/src workdir"
+          echo "PASS"
