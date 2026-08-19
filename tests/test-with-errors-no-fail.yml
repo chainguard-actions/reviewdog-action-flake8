@@ -1,0 +1,32 @@
+name: Test flake8 with errors but fail_on_error false
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up fake wget to mock reviewdog download
+        run: |
+          FAKE_BIN="/tmp/fake-bin"
+          mkdir -p "$FAKE_BIN"
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-wget.sh" "$FAKE_BIN/wget"
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-install-reviewdog.sh" "$FAKE_BIN/fake-install-reviewdog.sh"
+          chmod +x "$FAKE_BIN/wget" "$FAKE_BIN/fake-install-reviewdog.sh"
+          echo "$FAKE_BIN" >> "$GITHUB_PATH"
+
+      - name: Run action on Python code with errors (fail_on_error=false)
+        id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/with-errors
+          reporter: github-check
+          filter_mode: nofilter
+          fail_on_error: "false"
+          level: warning
+
+      - name: Assert action completed without failing (fail_on_error=false)
+        run: |
+          echo "PASS: action completed without error even though flake8 found violations"

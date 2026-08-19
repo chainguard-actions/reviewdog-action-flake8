@@ -1,0 +1,33 @@
+name: Test flake8 with custom flake8_args
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up fake wget to mock reviewdog download
+        run: |
+          FAKE_BIN="/tmp/fake-bin"
+          mkdir -p "$FAKE_BIN"
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-wget.sh" "$FAKE_BIN/wget"
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-install-reviewdog.sh" "$FAKE_BIN/fake-install-reviewdog.sh"
+          chmod +x "$FAKE_BIN/wget" "$FAKE_BIN/fake-install-reviewdog.sh"
+          echo "$FAKE_BIN" >> "$GITHUB_PATH"
+
+      - name: Run action with extended max-line-length via flake8_args
+        id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/longlines
+          flake8_args: "--max-line-length=120"
+          reporter: github-check
+          filter_mode: nofilter
+          fail_on_error: "false"
+          level: warning
+
+      - name: Assert action completed with custom flake8 args
+        run: |
+          echo "PASS: action completed with custom flake8_args (--max-line-length=120)"

@@ -10,9 +10,11 @@ export REVIEWDOG_GITHUB_API_TOKEN="${INPUT_GITHUB_TOKEN}"
 export REVIEWDOG_VERSION=v0.20.1
 
 echo "[action-flake8] Installing reviewdog..."
-wget -O /tmp/reviewdog_install.sh -q https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh
-sh /tmp/reviewdog_install.sh -b /tmp "${REVIEWDOG_VERSION}"
-rm /tmp/reviewdog_install.sh
+# Download the install script to a temp file, then execute it (no pipe-to-shell)
+_install_script="$(mktemp)"
+wget -O "${_install_script}" -q https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh
+sh "${_install_script}" -b /tmp "${REVIEWDOG_VERSION}"
+rm -f "${_install_script}"
 
 if [[ "$(which flake8)" == "" ]]; then
   echo "[action-flake8] Installing flake8 package..."
@@ -23,14 +25,15 @@ flake8 --version
 
 echo "[action-flake8] Checking python code with the flake8 linter and reviewdog..."
 exit_val="0"
-flake8 . "${INPUT_FLAKE8_ARGS}" 2>&1 | # Removes ansi codes see https://github.com/reviewdog/errorformat/issues/51
+# shellcheck disable=SC2086
+flake8 . ${INPUT_FLAKE8_ARGS:+"${INPUT_FLAKE8_ARGS}"} 2>&1 | # Removes ansi codes see https://github.com/reviewdog/errorformat/issues/51
   /tmp/reviewdog -f="${INPUT_ERROR_FORMAT}" \
     -name="${INPUT_TOOL_NAME}" \
     -reporter="${INPUT_REPORTER}" \
     -filter-mode="${INPUT_FILTER_MODE}" \
     -fail-on-error="${INPUT_FAIL_ON_ERROR}" \
     -level="${INPUT_LEVEL}" \
-    "${INPUT_REVIEWDOG_FLAGS}" || exit_val="$?"
+    ${INPUT_REVIEWDOG_FLAGS:+"${INPUT_REVIEWDOG_FLAGS}"} || exit_val="$?"
 
 echo "[action-flake8] Clean up reviewdog..."
 rm /tmp/reviewdog

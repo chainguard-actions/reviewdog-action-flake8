@@ -1,0 +1,41 @@
+name: Test fail_on_error with flake8 violations
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Pre-install flake8
+        run: python -m pip install --upgrade flake8
+
+      - name: Create Python file with flake8 violations in isolated directory
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/baddir"
+          printf 'import os\nimport sys\nx=1\ny = 2\nz = x+y\nprint(z)\n' > "$GITHUB_WORKSPACE/baddir/bad_sample.py"
+
+      - name: Run flake8 action expecting failure
+        id: action
+        uses: .
+        with:
+          github_token: "dummy-token-for-local-test"
+          workdir: "baddir"
+          reporter: "local"
+          fail_on_error: "true"
+          filter_mode: "nofilter"
+        continue-on-error: true
+
+      - name: Assert action failed due to flake8 errors
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail when flake8 finds errors with fail_on_error=true"
+            exit 1
+          fi
+          echo "PASS: action correctly failed when flake8 found violations"
