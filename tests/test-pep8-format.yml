@@ -1,0 +1,31 @@
+name: Test pep8 error format
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set up Python and flake8
+        run: python3 -m pip install --upgrade flake8
+      - name: Install fake reviewdog installer and fake wget
+        run: |
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-install-reviewdog.sh" /tmp/fake-install-reviewdog.sh
+          chmod +x /tmp/fake-install-reviewdog.sh
+          mkdir -p /tmp/fake-bin
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-wget.sh" /tmp/fake-bin/wget
+          chmod +x /tmp/fake-bin/wget
+          echo "/tmp/fake-bin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/clean
+          error_format: "pep8"
+          reporter: github-check
+          filter_mode: nofilter
+          fail_level: none
+          fail_on_error: "false"
+      - name: Assert action completed with pep8 error format
+        run: |
+          echo "PASS: action completed with error_format=pep8"

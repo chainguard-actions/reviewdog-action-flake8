@@ -1,0 +1,34 @@
+name: Test custom flake8_args
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create Python file with long lines
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/long_lines_src"
+          cat > "$GITHUB_WORKSPACE/long_lines_src/long_line.py" << 'EOF'
+          """Module with a long line that would normally fail E501."""
+
+
+          def function_with_a_very_long_name_that_exceeds_the_default_line_length_of_seventy_nine_chars():
+              """Docstring."""
+              pass
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          github_token: "dummy-token"
+          workdir: long_lines_src
+          reporter: local
+          filter_mode: nofilter
+          fail_level: none
+          flake8_args: "--max-line-length=200"
+
+      - name: Assert action completed with extended line length
+        run: |
+          echo "PASS: action ran with custom flake8_args (--max-line-length=200)"

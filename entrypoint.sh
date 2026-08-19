@@ -10,10 +10,9 @@ export REVIEWDOG_GITHUB_API_TOKEN="${INPUT_GITHUB_TOKEN}"
 export REVIEWDOG_VERSION=v0.20.2
 
 echo "[action-flake8] Installing reviewdog..."
-_install_script="$(mktemp)"
-wget -O "${_install_script}" -q https://raw.githubusercontent.com/reviewdog/reviewdog/fd59714416d6d9a1c0692d872e38e7f8448df4fc/install.sh
-sh "${_install_script}" -b /tmp "${REVIEWDOG_VERSION}"
-rm -f "${_install_script}"
+wget -O /tmp/reviewdog-install.sh -q https://raw.githubusercontent.com/reviewdog/reviewdog/fd59714416d6d9a1c0692d872e38e7f8448df4fc/install.sh
+sh /tmp/reviewdog-install.sh -b /tmp "${REVIEWDOG_VERSION}"
+rm /tmp/reviewdog-install.sh
 
 if [[ "$(which flake8)" == "" ]]; then
   echo "[action-flake8] Installing flake8 package..."
@@ -25,7 +24,7 @@ flake8 --version
 echo "[action-flake8] Checking python code with the flake8 linter and reviewdog..."
 exit_val="0"
 
-# Split caller-controlled inputs into arrays to prevent shell injection
+# Build arrays to allow safe word-splitting of user-supplied flags
 read -ra flake8_args <<< "${INPUT_FLAKE8_ARGS}"
 read -ra reviewdog_flags <<< "${INPUT_REVIEWDOG_FLAGS}"
 

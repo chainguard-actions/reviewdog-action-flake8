@@ -8,7 +8,7 @@
 
 **Test Policy SHA:** `843adf9e4b8f85d0c08b27b9d0b09dd094b54702`
 
-**Harden Agent Version:** `1`
+**Harden Agent Version:** `2`
 
 Action **reviewdog--action-flake8/v3.15.2** was hardened automatically. 3 finding(s) were identified and resolved across 1 iteration(s).
 
@@ -16,7 +16,7 @@ Action **reviewdog--action-flake8/v3.15.2** was hardened automatically. 3 findin
 
 ### unsafe-shell (severity: high)
 
-entrypoint.sh downloads a remote install script and pipes it directly to `sh` without first saving it to a file for inspection. The command `wget -O - -q https://raw.githubusercontent.com/reviewdog/reviewdog/.../install.sh | sh -s -- -b /tmp "${REVIEWDOG_VERSION}"` executes whatever the remote server returns. Even though the URL is pinned to a commit SHA in the path, the content is still executed without verification, and any MITM or CDN compromise would result in arbitrary code execution on the runner.
+entrypoint.sh downloads a remote install script and pipes it directly to `sh` without first saving it to a file for inspection. Pattern: `wget -O - -q https://raw.githubusercontent.com/reviewdog/reviewdog/.../install.sh | sh -s -- -b /tmp "${REVIEWDOG_VERSION}"`. Even though the URL is pinned to a specific commit SHA, piping remote content directly to a shell interpreter is an unsafe pattern that bypasses any opportunity to verify the script before execution.
 
 Locations:
 
@@ -24,30 +24,31 @@ Locations:
 
 ### script-injection (severity: high)
 
-Rule (b) violation: `${INPUT_FLAKE8_ARGS}` is expanded unquoted in the shell command `flake8 . ${INPUT_FLAKE8_ARGS}`. This variable is set from `inputs.flake8_args` (a caller-controlled input) via the `env:` block in action.yml. Because it is unquoted, an attacker can inject shell metacharacters (`;`, `|`, `&`, `$(...)`, etc.) through the `flake8_args` input to execute arbitrary commands. The shellcheck disable comment on the preceding line acknowledges but does not fix the issue.
+Rule (b) violation: Two unquoted shell variable expansions of untrusted inputs appear in entrypoint.sh. (1) `flake8 . ${INPUT_FLAKE8_ARGS} 2>&1` — INPUT_FLAKE8_ARGS is set from `inputs.flake8_args` (a caller-controlled value) and is expanded unquoted, allowing shell metacharacter injection (`;`, `|`, `&`, `$(...)`, etc.). The `# shellcheck disable=SC2086` comment acknowledges the unquoted expansion. (2) `${INPUT_REVIEWDOG_FLAGS}` — similarly unquoted, set from `inputs.reviewdog_flags`. Both must be double-quoted: `"${INPUT_FLAKE8_ARGS}"` and `"${INPUT_REVIEWDOG_FLAGS}"` (or use an array if word-splitting is intentional).
 
 Locations:
 
 - `entrypoint.sh:22`
+- `entrypoint.sh:30`
 
-### script-injection (severity: high)
+### missing-permissions (severity: medium)
 
-Rule (b) violation: `${INPUT_REVIEWDOG_FLAGS}` is expanded unquoted at the end of the reviewdog invocation (`${INPUT_REVIEWDOG_FLAGS} || exit_val="$?"`). This variable is set from `inputs.reviewdog_flags` (a caller-controlled input) via the `env:` block in action.yml. Because it is unquoted, an attacker can inject shell metacharacters through the `reviewdog_flags` input to execute arbitrary commands on the runner.
+None of the four workflow files declare a `permissions:` key at the top level or at the job level. Without explicit permissions, workflows run with the repository's default token permissions, which may be overly broad (e.g., write access to contents, pull-requests, etc.). Each workflow should declare minimal required permissions. Affected files: depup.yml, release.yml, reviewdog.yml, test.yml.
 
 Locations:
 
-- `entrypoint.sh:30`
+- `.github/workflows/depup.yml:1`
+- `.github/workflows/release.yml:1`
+- `.github/workflows/reviewdog.yml:1`
+- `.github/workflows/test.yml:1`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** unsafe-shell, script-injection
+**Fixes applied:** unsafe-shell, script-injection, missing-permissions
 
 **Notes:**
 
-Fixed all three findings in entrypoint.sh:
-1. unsafe-shell (line 13): Replaced `wget ... | sh` pipe with: download to a mktemp file, execute separately, then delete the temp file.
-2. script-injection (line 22): Replaced unquoted `${INPUT_FLAKE8_ARGS}` with a bash array: `read -ra flake8_args <<< "${INPUT_FLAKE8_ARGS}"` and `"${flake8_args[@]}"`.
-3. script-injection (line 30): Replaced unquoted `${INPUT_REVIEWDOG_FLAGS}` with a bash array: `read -ra reviewdog_flags <<< "${INPUT_REVIEWDOG_FLAGS}"` and `"${reviewdog_flags[@]}"`.
+1. unsafe-shell (entrypoint.sh:13): Replaced `wget ... | sh` pipe pattern with: download script to /tmp/reviewdog-install.sh, execute it separately, then remove it. 2. script-injection (entrypoint.sh:22,30): Replaced unquoted ${INPUT_FLAKE8_ARGS} and ${INPUT_REVIEWDOG_FLAGS} with bash arrays (`read -ra flake8_args <<< "${INPUT_FLAKE8_ARGS}"` and `read -ra reviewdog_flags <<< "${INPUT_REVIEWDOG_FLAGS}"`), expanded as `"${flake8_args[@]}"` and `"${reviewdog_flags[@]}"`. Removed the shellcheck disable comment. 3. missing-permissions: Added top-level `permissions:` blocks to all 4 workflow files: depup.yml (contents: write, pull-requests: write), release.yml (contents: write, pull-requests: write), reviewdog.yml (contents: read, checks: write, pull-requests: write), test.yml (contents: read, checks: write, pull-requests: write).
 
